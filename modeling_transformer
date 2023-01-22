@@ -1,0 +1,45 @@
+import tensorflow as tf
+from transformers import T5Tokenizer, TFT5ForCausalLM
+
+# Load the data
+text = np.load('text.npy')
+
+# Create the tokenizer
+tokenizer = T5Tokenizer.from_pretrained('t5-base')
+
+# Tokenize the text
+input_ids = [tokenizer.encode(sentence, return_tensors='tf') for sentence in text]
+
+# Create the model
+model = TFT5ForCausalLM.from_pretrained('t5-base')
+
+# Define the loss function and optimizer
+loss_fn = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True)
+optimizer = tf.keras.optimizers.Adam()
+
+# Define the metric to track
+train_acc = tf.keras.metrics.SparseCategoricalAccuracy()
+val_acc = tf.keras.metrics.SparseCategoricalAccuracy()
+
+# Define the train_step function
+@tf.function
+def train_step(input_ids, labels):
+    with tf.GradientTape() as tape:
+        logits = model(input_ids)[0]
+        loss_value = loss_fn(labels, logits)
+    grads = tape.gradient(loss_value, model.trainable_variables)
+    optimizer.apply_gradients(zip(grads, model.trainable_variables))
+    train_acc(labels, logits)
+    return loss_value
+
+# Define the validation step
+@tf.function
+def val_step(input_ids, labels):
+    logits = model(input_ids)[0]
+    val_acc(labels, logits)
+
+# Train the model
+for epoch in range(10):
+    for input_ids, labels in train_data:
+        loss_value = train_step(input_ids, labels)
+    for
